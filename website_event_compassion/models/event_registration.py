@@ -178,6 +178,7 @@ class Event(models.Model):
         compute='_compute_passport', inverse='_inverse_passport')
     passport_number = fields.Char()
     passport_expiration_date = fields.Date()
+    flight_ids = fields.One2many('event.flight', 'registration_id', 'Flights')
 
     # Payment fields
     ################
@@ -454,6 +455,12 @@ class Event(models.Model):
     @api.model
     def create(self, values):
         record = super(Event, self).create(values)
+
+        # check the subtype note by default
+        # for all the default follower of a new registration
+        self.mapped('message_follower_ids').write(
+            {'subtype_ids': [(4, self.env.ref('mail.mt_note').id)]})
+
         # Set default fundraising objective if none was set
         event = record.event_id
         if not record.amount_objective and event.participants_amount_objective:
