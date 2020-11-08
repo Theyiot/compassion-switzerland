@@ -167,6 +167,13 @@ class MyAccountController(PaymentFormController):
         letter_ids = request.env["correspondence"].search([
             ("sponsorship_id", "=", sponsorship_ids[0].id),
         ])
+        lines = request.env["account.invoice.line"].search([
+            ("partner_id", "=", partner.id),
+            ("state", "=", "paid"),
+            ("contract_id.child_id", "=", child_id.id),
+            ("product_id.categ_id.id", "=", 5),
+            ("price_total", "!=", 0),
+        ])
         if not child_id:
             return request.redirect(f"/my/children")
         else:
@@ -174,5 +181,6 @@ class MyAccountController(PaymentFormController):
             return request.render(
                 "website_compassion.my_children_page_template",
                 {"child_id": child_id,
-                 "letter_ids": letter_ids},
+                 "letter_ids": letter_ids,
+                 "line_ids": lines},
             )
