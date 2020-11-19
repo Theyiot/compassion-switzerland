@@ -152,16 +152,11 @@ class MyAccountController(PaymentFormController):
     @route("/my/child/<int:child_id>", type="http", auth="user", website=True)
     def my_child(self, child_id, **kwargs):
         partner = request.env.user.partner_id
-        children = (partner.contracts_fully_managed +
-                    partner.contracts_correspondant +
-                    partner.contracts_paid) \
-            .mapped("child_id").sorted("preferred_name")
-        child_id = children.filtered(lambda child: child.id == child_id)
-        sponsorship_ids = child_id.sponsorship_ids.filtered(
-            lambda contract: contract.partner_id == partner
-        )
-        letter_ids = request.env["correspondence"].search([
-            ("sponsorship_id", "=", sponsorship_ids[0].id),
+        children = _get_user_children()
+        child = children.filtered(lambda c: c.id == child_id)
+        letters = request.env["correspondence"].search([
+            ("partner_id", "=", partner.id),
+            ("child_id", "=", child_id),
         ])
         lines = request.env["account.invoice.line"].search([
             ("partner_id", "=", partner.id),
@@ -176,7 +171,7 @@ class MyAccountController(PaymentFormController):
             child_id.get_infos()
             return request.render(
                 "website_compassion.my_children_page_template",
-                {"child_id": child_id,
-                 "letter_ids": letter_ids,
+                {"child_id": child,
+                 "letter_ids": letters,
                  "line_ids": lines},
             )
