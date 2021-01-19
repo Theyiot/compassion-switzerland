@@ -2,6 +2,7 @@
 <odoo>
     <data>
         <template id="personal_info_page_template" name="Personal information">
+            <t t-set="selected" t-value="'info'"/>
             <t t-call="website_compassion.my_account_layout">
                 <div class="container m64">
                     This will be the personal info view

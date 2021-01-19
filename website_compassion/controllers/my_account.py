@@ -17,15 +17,21 @@ from odoo.addons.cms_form_compassion.controllers.payment_controller import (
 )
 
 
-def _get_user_children(only_active=False):
+def _get_user_children(state=None):
     """
     Find all the children for which the connected user has a contract. There is
-    the possibility to fetch all chidren from contracts or only those for which
-    a sponsorship is active.
+    the possibility to fetch either only active chidren or only those that are
+    terminated / cancelled. By default, all sponsorships are returned
+
     :return: a recordset of child.compassion which the connected user sponsors
     """
     def filter_sponsorships(sponsorship):
-        return not only_active or sponsorship.state == "active"
+        if state == "active":
+            return sponsorship.state not in ["cancelled", "terminated"]
+        elif state == "terminated":
+            return sponsorship.state in ["cancelled", "terminated"]
+        else:
+            return True
 
     partner = request.env.user.partner_id
     return (
@@ -131,7 +137,7 @@ class MyAccountController(PaymentFormController):
 
     @route("/my/letter", type="http", auth="user", website=True)
     def my_letter(self, child_id=None, template_id=None, **kwargs):
-        children = _get_user_children(only_active=True)
+        children = _get_user_children("active")
         if len(children) == 0:
             return request.render("website_compassion.sponsor_a_child", {})
 
@@ -159,8 +165,20 @@ class MyAccountController(PaymentFormController):
             return request.redirect(f"/my/letter?child_id={children[0].id}")
 
     @route("/my/children", type="http", auth="user", website=True)
-    def my_child(self, child_id=None, **kwargs):
-        children = _get_user_children()
+    def my_child(self, state="active", child_id=None, **kwargs):
+        actives = _get_user_children("active")
+        terminated = _get_user_children("terminated")
+
+        display_state = True
+        # User can choose among groups if none of the two is empty
+        if len(actives) == 0 or len(terminated) == 0:
+            display_state = False
+
+        # We get the children group that we want to display
+        if state == "active" and len(actives) > 0:
+            children = actives
+        else:
+            children = terminated
 
         if len(children) == 0:
             return request.render("website_compassion.sponsor_a_child", {})
@@ -169,7 +187,7 @@ class MyAccountController(PaymentFormController):
             child = children.filtered(lambda c: c.id == int(child_id))
             if not child:  # The user does not sponsor this child_id
                 return request.redirect(
-                    f"/my/children?child_id={children[0].id}"
+                    f"/my/children?state={state}&child_id={children[0].id}"
                 )
             partner = request.env.user.partner_id
             letters = request.env["correspondence"].search([
@@ -191,7 +209,9 @@ class MyAccountController(PaymentFormController):
                 {"child_id": child,
                  "children": children,
                  "letters": letters,
-                 "lines": lines}
+                 "lines": lines,
+                 "state": state,
+                 "display_state": display_state}
             )
         else:
             return request.redirect(f"/my/children?child_id={children[0].id}")

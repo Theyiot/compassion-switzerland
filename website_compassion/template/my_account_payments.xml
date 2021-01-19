@@ -2,6 +2,7 @@
 <odoo>
     <data>
         <template id="payments_page_template" name="Payments / Invoicing">
+            <t t-set="selected" t-value="'donation'"/>
             <t t-call="website_compassion.my_account_layout">
                 <div class="container m64">
                     This will be the payments view
